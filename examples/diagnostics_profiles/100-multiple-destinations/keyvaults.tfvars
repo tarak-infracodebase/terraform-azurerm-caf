@@ -14,7 +14,9 @@ keyvaults = {
 
     network = {
       bypass         = "AzureServices"
-      default_action = "Allow"
+      default_action = "Deny"
+      # Add specific IP rules or subnet access as needed
+      # ip_rules = ["x.x.x.x/32"]
     }
     diagnostic_profiles = {
       log_analytics = {

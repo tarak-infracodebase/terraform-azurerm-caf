@@ -4,7 +4,30 @@ variable "global_settings" {
 variable "client_config" {
   description = "Client configuration object (see module README.md)."
 }
-variable "settings" {}
+variable "settings" {
+  description = "Configuration settings for the Key Vault"
+  type        = any
+
+  validation {
+    condition = can(var.settings.public_network_access_enabled) ? var.settings.public_network_access_enabled == false : true
+    error_message = "Key Vault public network access should be disabled for security. Set public_network_access_enabled = false and use private endpoints or VNet integration."
+  }
+
+  validation {
+    condition = can(var.settings.purge_protection_enabled) ? var.settings.purge_protection_enabled == true : true
+    error_message = "Key Vault purge protection should be enabled for production environments to prevent accidental deletion of critical secrets and keys."
+  }
+
+  validation {
+    condition = can(var.settings.soft_delete_retention_days) ? var.settings.soft_delete_retention_days >= 7 && var.settings.soft_delete_retention_days <= 90 : true
+    error_message = "Key Vault soft delete retention days must be between 7 and 90 days. Recommended: 90 days for production environments."
+  }
+
+  validation {
+    condition = can(var.settings.network.default_action) ? contains(["Deny", "Allow"], var.settings.network.default_action) : true
+    error_message = "Key Vault network default_action must be 'Deny' or 'Allow'. 'Deny' is recommended for security."
+  }
+}
 variable "vnets" {
   default = {}
 }

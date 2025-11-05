@@ -91,7 +91,8 @@ mssql_servers = {
     resource_group_key            = "rg1"
     version                       = "12.0"
     administrator_login           = "sqladmin"
-    administrator_login_password  = "joasdif2384u89#@^"
+    # administrator_login_password will be auto-generated and stored in Key Vault
+    keyvault_key                  = "kv1"
     connection_policy             = "Default"
     public_network_access_enabled = true
     minimum_tls_version           = "1.2"

@@ -17,9 +17,9 @@ resource "azurerm_postgresql_server" "postgresql" {
   geo_redundant_backup_enabled      = try(var.settings.geo_redundant_backup_enabled, null)
   infrastructure_encryption_enabled = try(var.settings.infrastructure_encryption_enableduto_grow_enabled, false)
   restore_point_in_time             = try(var.settings.restore_point_in_time, null)
-  public_network_access_enabled     = try(var.settings.public_network_access_enabled, true)
+  public_network_access_enabled     = try(var.settings.public_network_access_enabled, false)
   ssl_enforcement_enabled           = try(var.settings.ssl_enforcement_enabled, true)
-  ssl_minimal_tls_version_enforced  = try(var.settings.ssl_minimal_tls_version_enforced, "TLSEnforcementDisabled")
+  ssl_minimal_tls_version_enforced  = try(var.settings.ssl_minimal_tls_version_enforced, "TLS1_2")
   tags                              = local.tags
 
 

@@ -25,14 +25,16 @@ mssql_servers = {
     region                       = "region1"
     resource_group_key           = "sql_region1"
     administrator_login          = "adminuser"
-    administrator_login_password = "@dm1nu53r"
+    # administrator_login_password will be auto-generated and stored in Key Vault
+    # Alternatively, use: keyvault_key = "kv1" to reference an existing keyvault
   }
   sql-server-rg2 = {
     name                         = "sql-server-rg2"
     region                       = "region2"
     resource_group_key           = "sql_region2"
     administrator_login          = "adminuser"
-    administrator_login_password = "@dm1nu53r"
+    # administrator_login_password will be auto-generated and stored in Key Vault
+    # Alternatively, use: keyvault_key = "kv1" to reference an existing keyvault
   }
 }
 
