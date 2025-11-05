@@ -134,6 +134,8 @@ resource "azurerm_app_service" "app_service" {
     for_each = lookup(var.settings, "auth_settings", {}) != {} ? [1] : []
 
     content {
+      # SECURITY NOTE: Authentication is disabled by default. For production applications,
+      # consider enabling authentication to protect sensitive resources
       enabled                        = lookup(var.settings.auth_settings, "enabled", false)
       additional_login_params        = lookup(var.settings.auth_settings, "additional_login_params", null)
       allowed_external_redirect_urls = lookup(var.settings.auth_settings, "allowed_external_redirect_urls", null)

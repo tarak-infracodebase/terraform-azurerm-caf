@@ -38,7 +38,7 @@ resource "azurerm_storage_account" "stg" {
   resource_group_name               = local.resource_group_name
   table_encryption_key_type         = try(var.storage_account.table_encryption_key_type, null)
   tags                              = merge(local.tags, try(var.storage_account.tags, null), local.caf_tags)
-  public_network_access_enabled     = try(var.storage_account.public_network_access_enabled, null)
+  public_network_access_enabled     = try(var.storage_account.public_network_access_enabled, false)
 
 
   dynamic "custom_domain" {
@@ -76,6 +76,9 @@ resource "azurerm_storage_account" "stg" {
       default_service_version  = try(var.storage_account.blob_properties.default_service_version, "2020-06-12")
       last_access_time_enabled = try(var.storage_account.blob_properties.last_access_time_enabled, false)
 
+      # SECURITY NOTE: CORS rules should be configured with specific origins, not wildcards ("*")
+      # Wildcard origins allow any domain to access your storage account, which may expose sensitive data
+      # Always specify exact domains in allowed_origins for production environments
       dynamic "cors_rule" {
         for_each = lookup(var.storage_account.blob_properties, "cors_rule", false) == false ? [] : [1]
 
@@ -110,6 +113,9 @@ resource "azurerm_storage_account" "stg" {
     for_each = lookup(var.storage_account, "queue_properties", false) == false ? [] : [1]
 
     content {
+      # SECURITY NOTE: CORS rules should be configured with specific origins, not wildcards ("*")
+      # Wildcard origins allow any domain to access your storage account, which may expose sensitive data
+      # Always specify exact domains in allowed_origins for production environments
       dynamic "cors_rule" {
         for_each = lookup(var.storage_account.queue_properties, "cors_rule", false) == false ? [] : [1]
 
@@ -214,6 +220,9 @@ resource "azurerm_storage_account" "stg" {
     for_each = can(var.storage_account.share_properties) ? [1] : []
 
     content {
+      # SECURITY NOTE: CORS rules should be configured with specific origins, not wildcards ("*")
+      # Wildcard origins allow any domain to access your storage account, which may expose sensitive data
+      # Always specify exact domains in allowed_origins for production environments
       dynamic "cors_rule" {
         for_each = can(var.storage_account.share_properties.cors_rule) ? [1] : []
 

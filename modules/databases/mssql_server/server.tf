@@ -3,9 +3,9 @@ resource "azurerm_mssql_server" "mssql" {
   resource_group_name           = local.resource_group_name
   location                      = local.location
   version                       = try(var.settings.version, "12.0")
-  administrator_login           = try(var.settings.azuread_administrator.azuread_authentication_only, false) == true ? null : var.settings.administrator_login
-  administrator_login_password  = try(var.settings.azuread_administrator.azuread_authentication_only, false) == true ? null : try(var.settings.administrator_login_password, azurerm_key_vault_secret.sql_admin_password.0.value)
-  public_network_access_enabled = try(var.settings.public_network_access_enabled, true)
+  administrator_login           = try(var.settings.azuread_administrator.azuread_authentication_only, true) == true ? null : var.settings.administrator_login
+  administrator_login_password  = try(var.settings.azuread_administrator.azuread_authentication_only, true) == true ? null : try(var.settings.administrator_login_password, azurerm_key_vault_secret.sql_admin_password.0.value)
+  public_network_access_enabled = try(var.settings.public_network_access_enabled, false)
   connection_policy             = try(var.settings.connection_policy, null)
   minimum_tls_version           = try(var.settings.minimum_tls_version, null)
   tags                          = local.tags
@@ -14,7 +14,7 @@ resource "azurerm_mssql_server" "mssql" {
     for_each = can(var.settings.azuread_administrator) ? [var.settings.azuread_administrator] : []
 
     content {
-      azuread_authentication_only = try(var.settings.azuread_administrator.azuread_authentication_only, false)
+      azuread_authentication_only = try(var.settings.azuread_administrator.azuread_authentication_only, true)
       login_username              = can(var.settings.azuread_administrator.login_username) ? var.settings.azuread_administrator.login_username : try(var.azuread_groups[var.client_config.landingzone_key][var.settings.azuread_administrator.azuread_group_key].display_name, var.azuread_groups[var.settings.azuread_administrator.lz_key][var.settings.azuread_administrator.azuread_group_key].display_name)
       object_id                   = can(var.settings.azuread_administrator.object_id) ? var.settings.azuread_administrator.object_id : try(var.azuread_groups[var.client_config.landingzone_key][var.settings.azuread_administrator.azuread_group_key].id, var.azuread_groups[var.settings.azuread_administrator.lz_key][var.settings.azuread_administrator.azuread_group_key].id)
       tenant_id                   = can(var.settings.azuread_administrator.tenant_id) ? var.settings.azuread_administrator.tenant_id : try(var.azuread_groups[var.client_config.landingzone_key][var.settings.azuread_administrator.azuread_group_key].tenant_id, var.azuread_groups[var.settings.azuread_administrator.lz_key][var.settings.azuread_administrator.azuread_group_key].tenant_id)
