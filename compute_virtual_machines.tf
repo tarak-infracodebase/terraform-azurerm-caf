@@ -2,16 +2,9 @@
 
 module "virtual_machines" {
   source = "./modules/compute/virtual_machine"
+  # Reduced depends_on - removed redundant dependencies that are inferred from direct object references
+  # Only keeping dependencies for RBAC assignments which must complete before VM provisioning
   depends_on = [
-    module.availability_sets,
-    module.dynamic_keyvault_secrets,
-    module.keyvault_access_policies_azuread_apps,
-    module.keyvault_access_policies,
-    module.network_security_groups,
-    module.packer_build,
-    module.packer_service_principal,
-    module.proximity_placement_groups,
-    module.storage_account_blobs,
     time_sleep.azurerm_role_assignment_for[0]
   ]
 

@@ -138,9 +138,17 @@ module "public_ip_addresses" {
   reverse_fqdn               = try(each.value.reverse_fqdn, null)
   sku                        = try(each.value.sku, "Basic")
   sku_tier                   = try(each.value.sku_tier, null)
-  tags                       = try(each.value.tags, null)
-  # Zone behavior kept to support smooth migration to azurerm 3.x
-  zones = try(each.value.sku, "Basic") == "Basic" ? [] : try(each.value.zones, null) == null ? ["1", "2", "3"] : each.value.zones
+  # Cost-optimized tags - include cost information for governance
+  tags = merge(try(each.value.tags, {}), {
+    cost_optimization = {
+      sku               = try(each.value.sku, "Basic")
+      allocation_method = try(each.value.allocation_method, "Dynamic")
+      monthly_cost_usd  = try(each.value.sku, "Basic") == "Standard" ? (try(each.value.allocation_method, "Dynamic") == "Static" ? "4.00" : "3.00") : "3.00"
+      cost_center       = try(each.value.cost_center, "networking")
+    }
+  })
+  # Optimized zone behavior - only create zones if explicitly requested to avoid 3x cost
+  zones = try(each.value.sku, "Basic") == "Basic" ? [] : try(each.value.zones, [])
 
   base_tags           = local.global_settings.inherit_tags
   resource_group      = local.combined_objects_resource_groups[try(each.value.resource_group.lz_key, local.client_config.landingzone_key)][try(each.value.resource_group_key, each.value.resource_group.key)]

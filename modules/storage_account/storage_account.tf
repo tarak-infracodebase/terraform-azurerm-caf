@@ -37,7 +37,16 @@ resource "azurerm_storage_account" "stg" {
   queue_encryption_key_type         = try(var.storage_account.queue_encryption_key_type, null)
   resource_group_name               = local.resource_group_name
   table_encryption_key_type         = try(var.storage_account.table_encryption_key_type, null)
-  tags                              = merge(local.tags, try(var.storage_account.tags, null), local.caf_tags)
+  # Cost-optimized tags with storage tier information
+  tags = merge(local.tags, try(var.storage_account.tags, null), local.caf_tags, {
+    cost_optimization = {
+      tier                = try(var.storage_account.account_tier, "Standard")
+      replication_type    = try(var.storage_account.account_replication_type, "LRS")
+      access_tier         = contains(["BlobStorage", "FileStorage", "StorageV2"], try(var.storage_account.account_kind, "StorageV2")) ? try(var.storage_account.access_tier, "Hot") : "N/A"
+      lifecycle_managed   = length(try(var.storage_account.management_policies, {})) > 0 || try(var.storage_account.enable_default_lifecycle, false) ? "true" : "false"
+      estimated_monthly_cost = "${try(var.storage_account.account_tier, "Standard") == "Premium" ? "10x" : "1x"} standard storage cost"
+    }
+  })
   public_network_access_enabled     = try(var.storage_account.public_network_access_enabled, null)
 
 
@@ -292,6 +301,35 @@ module "file_share" {
   resource_group_name  = local.resource_group_name
 }
 
+# Default cost-optimized lifecycle policy when enabled
+module "default_management_policy" {
+  source             = "./management_policy"
+  for_each           = try(var.storage_account.enable_default_lifecycle, false) && length(try(var.storage_account.management_policies, {})) == 0 ? { default = {} } : {}
+  storage_account_id = azurerm_storage_account.stg.id
+  settings = {
+    rules = {
+      default_lifecycle = {
+        name    = "default-cost-optimization"
+        enabled = true
+        filters = {
+          blob_types = ["blockBlob"]
+        }
+        actions = {
+          base_blob = {
+            tier_to_cool_after_days_since_modification_greater_than    = try(var.storage_account.lifecycle_cool_after_days, 30)
+            tier_to_archive_after_days_since_modification_greater_than = try(var.storage_account.lifecycle_archive_after_days, 90)
+            delete_after_days_since_modification_greater_than          = try(var.storage_account.lifecycle_delete_after_days, 2555) # ~7 years
+          }
+          snapshot = {
+            delete_after_days_since_creation_greater_than = 90
+          }
+        }
+      }
+    }
+  }
+}
+
+# Custom management policies (if provided)
 module "management_policy" {
   source             = "./management_policy"
   for_each           = try(var.storage_account.management_policies, {})

@@ -24,7 +24,7 @@ module "mssql_managed_instances_v1" {
     for key, value in local.database.mssql_managed_instances : key => value
     if try(value.version, "") == "v1"
   }
-  depends_on = [module.routes, module.azuread_roles_msi]
+  # Removed depends_on - networking and managed identities are passed directly as object references
 
   global_settings    = local.global_settings
   client_config      = local.client_config
@@ -52,7 +52,7 @@ module "mssql_managed_instances_secondary_v1" {
     for key, value in local.database.mssql_managed_instances_secondary : key => value
     if try(value.version, "") == "v1"
   }
-  depends_on = [module.routes, module.azuread_roles_msi]
+  # Removed depends_on - networking and managed identities are passed directly as object references
 
   global_settings    = local.global_settings
   client_config      = local.client_config
@@ -80,7 +80,8 @@ module "mssql_mi_failover_groups_v1" {
     for key, value in local.database.mssql_mi_failover_groups : key => value
     if try(value.version, "") == "v1"
   }
-  depends_on               = [module.mssql_managed_instances_secondary_v1]
+  # Keep this depends_on - failover groups need both primary and secondary instances to exist first
+  depends_on               = [module.mssql_managed_instances_v1, module.mssql_managed_instances_secondary_v1]
   global_settings          = local.global_settings
   settings                 = each.value
   managed_instance         = local.combined_objects_mssql_managed_instances[try(each.value.primary_server.lz_key, local.client_config.landingzone_key)][each.value.primary_server.mi_server_key]
@@ -97,7 +98,7 @@ module "mssql_mi_administrators_v1" {
     if try(value.version, "") == "v1" && try(value.authentication_mode, "aad_only") != "sql_only"
   }
 
-  depends_on = [module.managed_identities]
+  # Removed depends_on - managed instance ID is referenced directly, creating implicit dependency
 
   managed_instance_id = module.mssql_managed_instances_v1[each.key].id
   settings            = each.value.administrators
@@ -114,7 +115,7 @@ module "mssql_mi_administrators_secondary_v1" {
     if try(value.version, "") == "v1" && try(value.authentication_mode, "aad_only") != "sql_only"
   }
 
-  depends_on = [module.managed_identities]
+  # Removed depends_on - managed instance ID is referenced directly, creating implicit dependency
 
   managed_instance_id = module.mssql_managed_instances_secondary_v1[each.key].id
   settings            = each.value.administrators
@@ -126,9 +127,9 @@ module "mssql_mi_administrators_secondary_v1" {
 #Both initial setup and rotation of the TDE protector must be done on the secondary first, and then on primary.
 module "mssql_mi_tde_v1" {
   source     = "./modules/databases/mssql_managed_instance_v1/tde"
+  # Keep keyvault_access_policies dependency - TDE requires key vault permissions to be set first
   depends_on = [module.keyvault_access_policies]
 
-  //depends_on =
   for_each = {
     for key, value in local.database.mssql_mi_tdes : key => value
     if try(value.version, "") == "v1"
@@ -142,6 +143,7 @@ module "mssql_mi_tde_v1" {
 
 module "mssql_mi_secondary_tde_v1" {
   source     = "./modules/databases/mssql_managed_instance_v1/tde"
+  # Keep both dependencies - secondary TDE must wait for primary TDE, and key vault access policies
   depends_on = [module.mssql_mi_tde_v1, module.keyvault_access_policies]
 
   for_each = {
