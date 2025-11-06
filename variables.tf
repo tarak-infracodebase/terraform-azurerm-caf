@@ -1,6 +1,21 @@
 # Global settings
 variable "global_settings" {
   description = "Global settings object for the current deployment."
+  type = object({
+    passthrough    = optional(bool, false)
+    random_length  = optional(number, 4)
+    default_region = optional(string, "region1")
+    environment    = optional(string, "sandpit")
+    prefix         = optional(string)
+    prefixes       = optional(list(string))
+    inherit_tags   = optional(bool, false)
+    use_slug       = optional(bool, true)
+    regions        = optional(map(string), {
+      region1 = "southeastasia"
+      region2 = "eastasia"
+    })
+    tags           = optional(map(string))
+  })
   default = {
     passthrough    = false
     random_length  = 4
@@ -9,6 +24,29 @@ variable "global_settings" {
       region1 = "southeastasia"
       region2 = "eastasia"
     }
+  }
+
+  validation {
+    condition     = var.global_settings.random_length >= 0 && var.global_settings.random_length <= 10
+    error_message = "Random length must be between 0 and 10 characters."
+  }
+
+  validation {
+    condition = can(regex("^(sandpit|dev|development|test|testing|staging|stage|prod|production)$", var.global_settings.environment))
+    error_message = "Environment must be one of: sandpit, dev, development, test, testing, staging, stage, prod, production."
+  }
+
+  validation {
+    condition = var.global_settings.prefix == null || can(regex("^[a-zA-Z][a-zA-Z0-9-]{0,8}[a-zA-Z0-9]$", var.global_settings.prefix))
+    error_message = "Prefix must be 1-10 characters, start with a letter, end with alphanumeric, and contain only letters, numbers, and hyphens."
+  }
+
+  validation {
+    condition = alltrue([
+      for region_key, region_value in var.global_settings.regions :
+      can(regex("^[a-z0-9]+$", region_key)) && length(region_key) <= 20
+    ])
+    error_message = "Region keys must be lowercase alphanumeric and max 20 characters."
   }
 }
 
@@ -82,9 +120,19 @@ variable "enable" {
 }
 
 variable "environment" {
-  description = "Name of the CAF environment."
+  description = "Name of the CAF environment. Used for resource naming and applying environment-specific security defaults."
   type        = string
   default     = "sandpit"
+
+  validation {
+    condition = can(regex("^(sandpit|dev|development|test|testing|staging|stage|prod|production)$", var.environment))
+    error_message = "Environment must be one of: sandpit, dev, development, test, testing, staging, stage, prod, production."
+  }
+
+  validation {
+    condition = length(var.environment) <= 15
+    error_message = "Environment name must be 15 characters or less to prevent resource naming conflicts."
+  }
 }
 
 variable "logged_user_objectId" {
@@ -296,8 +344,35 @@ variable "dynamic_keyvault_secrets" {
 
 ## Storage variables
 variable "storage_accounts" {
-  description = "Configuration object - Storage account resources"
+  description = "Configuration object - Storage account resources with security defaults applied"
+  type        = map(any)
   default     = {}
+
+  validation {
+    condition = alltrue([
+      for key, storage in var.storage_accounts :
+      can(storage.name) ? can(regex("^[a-z0-9]{3,24}$", storage.name)) : true
+    ])
+    error_message = "Storage account names must be 3-24 characters, lowercase letters and numbers only."
+  }
+
+  validation {
+    condition = alltrue([
+      for key, storage in var.storage_accounts :
+      can(storage.account_replication_type) ?
+        contains(["LRS", "GRS", "RAGRS", "ZRS", "GZRS", "RAGZRS"], storage.account_replication_type) : true
+    ])
+    error_message = "Storage account replication type must be one of: LRS, GRS, RAGRS, ZRS, GZRS, RAGZRS."
+  }
+
+  validation {
+    condition = alltrue([
+      for key, storage in var.storage_accounts :
+      can(storage.min_tls_version) ?
+        contains(["TLS1_0", "TLS1_1", "TLS1_2"], storage.min_tls_version) : true
+    ])
+    error_message = "Minimum TLS version must be TLS1_0, TLS1_1, or TLS1_2. TLS1_2 is recommended for security."
+  }
 }
 variable "storage" {
   description = "Configuration object - Storage account resources"

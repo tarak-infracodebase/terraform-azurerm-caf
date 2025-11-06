@@ -2,14 +2,53 @@
 # See http://pre-commit.com/hooks.html for more hooks
 repos:
   - repo: https://github.com/antonbabenko/pre-commit-terraform
-    rev: v1.81.0
+    rev: v1.88.4  # Updated to latest version for better security support
     hooks:
     - id: terraform_fmt
+      description: Rewrites all Terraform configuration files to a canonical format
     - id: terraform_docs
-    # - id: terraform_tflint
-    # - id: terraform_validate
-    # - id: terraform_tfsec
-    # - id: checkov
+      description: Inserts input and output documentation into README.md
+      args:
+        - --hook-config=--path-to-file=README.md        # path to file have to be relative to git repo root.
+        - --hook-config=--add-to-existing-file=true     # Boolean. true or false
+        - --hook-config=--create-file-if-not-exist=true # Boolean. true or false
+    - id: terraform_tflint
+      description: Validates all Terraform configuration files with TFLint
+      args:
+        - --args=--only=terraform_deprecated_interpolation
+        - --args=--only=terraform_deprecated_index
+        - --args=--only=terraform_unused_declarations
+        - --args=--only=terraform_comment_syntax
+        - --args=--only=terraform_documented_outputs
+        - --args=--only=terraform_documented_variables
+        - --args=--only=terraform_typed_variables
+        - --args=--only=terraform_module_pinned_source
+        - --args=--only=terraform_naming_convention
+        - --args=--only=terraform_required_version
+        - --args=--only=terraform_required_providers
+        - --args=--only=terraform_standard_module_structure
+        - --args=--only=terraform_workspace_remote
+    - id: terraform_validate
+      description: Validates all Terraform configuration files
+      args:
+        - --hook-config=--retry-once-with-cleanup=true
+    - id: terraform_tfsec
+      description: Static analysis of Terraform templates to spot potential security issues
+      args:
+        - >
+          --args=--minimum-severity=MEDIUM
+          --format=default
+          --no-colour
+          --concise-output
+          --exclude-downloaded-modules
+    - id: checkov
+      description: Runs checkov on Terraform configuration files
+      args:
+        - --framework=terraform
+        - --skip-check=CKV_AZURE_33  # Storage logging
+        - --skip-check=CKV_AZURE_35  # Storage container public access
+        - --skip-check=CKV2_AZURE_1  # Storage secure transfer
+        - --skip-check=CKV2_AZURE_8  # Storage public network access
   - repo: https://github.com/pre-commit/pre-commit-hooks
     rev: v4.4.0
     hooks:

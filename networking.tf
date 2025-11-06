@@ -20,29 +20,40 @@ output "network_watchers" {
 }
 
 
-#
-#
-# Virtual network
-#
-#
+# AZURE VIRTUAL NETWORKS
+# Core networking infrastructure providing isolated network environments
+# Supports multi-tier architectures, hybrid connectivity, and service integration
 
 module "networking" {
-  depends_on = [module.network_watchers]
+  depends_on = [module.network_watchers] # Network Watchers must exist for diagnostics
   source     = "./modules/networking/virtual_network"
   for_each   = local.networking.vnets
 
+  # Security components integration
   application_security_groups       = local.combined_objects_application_security_groups
-  client_config                     = local.client_config
-  ddos_id                           = try(local.combined_objects_ddos_services[try(each.value.ddos_services_lz_key, local.client_config.landingzone_key)][try(each.value.ddos_services_key, each.value.ddos_services_key)].id, "")
-  diagnostics                       = local.combined_diagnostics
-  global_settings                   = local.global_settings
   network_security_groups           = module.network_security_groups
   network_security_group_definition = local.networking.network_security_group_definition
-  network_watchers                  = local.combined_objects_network_watchers
-  route_tables                      = module.route_tables
+
+  # Core configuration
+  client_config                     = local.client_config
+  global_settings                   = local.global_settings
   settings                          = each.value
   tags                              = try(each.value.tags, null)
 
+  # DDoS Protection integration
+  # Provides protection against distributed denial of service attacks
+  # IMPORTANT: DDoS Standard is costly - only enable for production workloads requiring high availability
+  ddos_id                           = try(local.combined_objects_ddos_services[try(each.value.ddos_services_lz_key, local.client_config.landingzone_key)][try(each.value.ddos_services_key, each.value.ddos_services_key)].id, "")
+
+  # Monitoring and diagnostics
+  diagnostics                       = local.combined_diagnostics
+  network_watchers                  = local.combined_objects_network_watchers
+
+  # Routing configuration
+  # Route tables control traffic flow between subnets and to external destinations
+  route_tables                      = module.route_tables
+
+  # Resource placement and naming
   base_tags           = local.global_settings.inherit_tags
   resource_group      = local.combined_objects_resource_groups[try(each.value.resource_group.lz_key, local.client_config.landingzone_key)][try(each.value.resource_group_key, each.value.resource_group.key)]
   resource_group_name = can(each.value.resource_group.name) || can(each.value.resource_group_name) ? try(each.value.resource_group.name, each.value.resource_group_name) : null

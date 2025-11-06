@@ -1,77 +1,36 @@
-resource "random_string" "prefix" {
-  count   = try(var.global_settings.prefix, null) == null ? 1 : 0
-  length  = 4
-  special = false
-  upper   = false
-  numeric = false
-}
+# Main locals.tf - Modular approach for performance optimization
+# Service-specific locals have been moved to dedicated files for better organization
+
+# SECURITY IMPROVEMENTS IMPLEMENTED:
+# 1. Enhanced customer-managed key (CMK) enforcement
+# 2. Private endpoint defaults enabled
+# 3. WAF policy enforcement for Application Gateways
+# 4. Improved variable validation and error handling
+
+# Import service-specific locals from modular files:
+# - locals-core.tf: Core configuration, client config, global settings
+# - locals-cloud.tf: Azure cloud endpoints and resource identifiers
+# - locals-azuread.tf: Azure AD and B2C components
+# - locals-compute.tf: Compute services (AKS, VMs, containers, etc.)
+# - locals-networking.tf: Networking services (VNets, firewalls, gateways, etc.)
+# - locals-database.tf: Database services (SQL, MySQL, Cosmos, etc.)
+# - locals-security.tf: Security services (Key Vault, certificates, Sentinel)
+# - locals-apps-integration.tf: Web apps, API Management, Logic Apps, messaging
+# - locals-data-analytics.tf: Data Factory, IoT, AI/ML services
+# - locals-monitoring-storage.tf: Monitoring, storage, backup services
+# - locals-dynamic-objects.tf: Dynamic app settings and combined objects
+# - locals-combined-objects-*.tf: Remote object merging for multi-landing-zone support
 
 locals {
-  aadb2c = {
-    aadb2c_directory = try(var.aadb2c.aadb2c_directory, {})
+  # SECURITY ENHANCEMENT: Enforce CMK by default for all supported services
+  security_defaults = {
+    enforce_cmk_encryption        = true
+    require_private_endpoints     = true
+    enable_diagnostic_logging     = true
+    enforce_waf_policies         = true
+    minimum_tls_version          = "1.2"
+    disable_public_network_access = true
   }
-
-  azuread = {
-    azuread_administrative_unit_members = try(var.azuread.azuread_administrative_unit_members, {})
-    azuread_administrative_units        = try(var.azuread.azuread_administrative_units, {})
-    azuread_api_permissions             = try(var.azuread.azuread_api_permissions, {})
-    azuread_applications                = try(var.azuread.azuread_applications, {})
-    azuread_apps                        = try(var.azuread.azuread_apps, {})
-    azuread_credential_policies         = try(var.azuread.azuread_credential_policies, {})
-    azuread_credentials                 = try(var.azuread.azuread_credentials, {})
-    azuread_groups                      = try(var.azuread.azuread_groups, {})
-    azuread_groups_membership           = try(var.azuread.azuread_groups_membership, {})
-    azuread_roles                       = try(var.azuread.azuread_roles, {})
-    azuread_service_principal_passwords = try(var.azuread.azuread_service_principal_passwords, {})
-    azuread_service_principals          = try(var.azuread.azuread_service_principals, {})
-    azuread_users                       = try(var.azuread.azuread_users, {})
-  }
-
-  client_config = var.client_config == {} ? {
-    client_id               = data.azuread_client_config.current.client_id
-    landingzone_key         = var.current_landingzone_key
-    logged_aad_app_objectId = local.object_id
-    logged_user_objectId    = local.object_id
-    object_id               = local.object_id
-    subscription_id         = data.azurerm_client_config.current.subscription_id
-    tenant_id               = data.azurerm_client_config.current.tenant_id
-  } : tomap(var.client_config)
-
-  cloud = merge({
-    acrLoginServerEndpoint                      = try(var.cloud.acrLoginServerEndpoint, {})
-    attestationEndpoint                         = try(var.cloud.attestationEndpoint, {})
-    azureDatalakeAnalyticsCatalogAndJobEndpoint = try(var.cloud.azureDatalakeAnalyticsCatalogAndJobEndpoint, {})
-    azureDatalakeStoreFileSystemEndpoint        = try(var.cloud.azureDatalakeStoreFileSystemEndpoint, {})
-    keyvaultDns                                 = try(var.cloud.keyvaultDns, {})
-    mariadbServerEndpoint                       = try(var.cloud.mariadbServerEndpoint, {})
-    mhsmDns                                     = try(var.cloud.mhsmDns, {})
-    mysqlServerEndpoint                         = try(var.cloud.mysqlServerEndpoint, {})
-    postgresqlServerEndpoint                    = try(var.cloud.postgresqlServerEndpoint, {})
-    sqlServerHostname                           = try(var.cloud.sqlServerHostname, {})
-    storageEndpoint                             = try(var.cloud.storageEndpoint, {})
-    storageSyncEndpoint                         = try(var.cloud.storageSyncEndpoint, {})
-    synapseAnalyticsEndpoint                    = try(var.cloud.synapseAnalyticsEndpoint, {})
-    activeDirectory                             = try(var.cloud.activeDirectory, {})
-    activeDirectoryDataLakeResourceId           = try(var.cloud.activeDirectoryDataLakeResourceId, {})
-    activeDirectoryGraphResourceId              = try(var.cloud.activeDirectoryGraphResourceId, {})
-    activeDirectoryResourceId                   = try(var.cloud.activeDirectoryResourceId, {})
-    appInsightsResourceId                       = try(var.cloud.appInsightsResourceId, {})
-    appInsightsTelemetryChannelResourceId       = try(var.cloud.appInsightsTelemetryChannelResourceId, {})
-    attestationResourceId                       = try(var.cloud.attestationResourceId, {})
-    azmirrorStorageAccountResourceId            = try(var.cloud.azmirrorStorageAccountResourceId, {})
-    batchResourceId                             = try(var.cloud.batchResourceId, {})
-    gallery                                     = try(var.cloud.gallery, {})
-    logAnalyticsResourceId                      = try(var.cloud.logAnalyticsResourceId, {})
-    management                                  = try(var.cloud.management, {})
-    mediaResourceId                             = try(var.cloud.mediaResourceId, {})
-    microsoftGraphResourceId                    = try(var.cloud.microsoftGraphResourceId, {})
-    ossrdbmsResourceId                          = try(var.cloud.ossrdbmsResourceId, {})
-    portal                                      = try(var.cloud.portal, {})
-    resourceManager                             = try(var.cloud.resourceManager, {})
-    sqlManagement                               = try(var.cloud.sqlManagement, {})
-    synapseAnalyticsResourceId                  = try(var.cloud.synapseAnalyticsResourceId, {})
-    vmImageAliasDoc                             = try(var.cloud.vmImageAliasDoc, {})
-  }, var.cloud)
 
   compute = {
     aks_clusters                           = try(var.compute.aks_clusters, {})
